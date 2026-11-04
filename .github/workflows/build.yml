@@ -1,4 +1,4 @@
-name: Build and deploy
+name: Build
 
 on:
   push:
@@ -10,10 +10,7 @@ env:
 
 jobs:
   build:
-    # Self-hosted: the deploy step has to reach tailnet-only Portainer APIs,
-    # which GitHub-hosted runners cannot. QEMU gives both architectures from
-    # the one amd64 runner.
-    runs-on: [self-hosted, paseo]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -33,6 +30,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          # Both architectures from the one hosted runner.
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -40,49 +38,3 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build
-    runs-on: [self-hosted, paseo]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Pin the stack to this commit and redeploy
-        env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-          PORTAINER_KEY: ${{ secrets.PORTAINER_KEY }}
-          PORTAINER_ENDPOINT: ${{ vars.PORTAINER_ENDPOINT }}
-          PORTAINER_STACK: ${{ vars.PORTAINER_STACK }}
-          IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
-        run: |
-          set -euo pipefail
-          : "${PORTAINER_URL:?}" "${PORTAINER_KEY:?}" "${PORTAINER_ENDPOINT:?}" "${PORTAINER_STACK:?}"
-
-          curl -fsS -H "X-API-Key: $PORTAINER_KEY" "$PORTAINER_URL/api/stacks" -o /tmp/stacks.json
-          ID=$(python3 -c "
-          import json, os
-          name = os.environ['PORTAINER_STACK']
-          rows = [s for s in json.load(open('/tmp/stacks.json')) if s.get('Name') == name]
-          print(rows[0]['Id'] if rows else '')
-          ")
-          [ -n "$ID" ] || { echo "stack '$PORTAINER_STACK' not found" >&2; exit 1; }
-
-          # The stack's environment holds the secrets; they are not in this repo.
-          curl -fsS -H "X-API-Key: $PORTAINER_KEY" \
-            "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/stack.json
-
-          python3 - <<'PY'
-          import json, os
-          compose = open('docker-compose.yml').read().replace(
-              'image: ghcr.io/tekkifox/oracle-mongo-backup:latest',
-              f"image: {os.environ['IMAGE']}")
-          env = (json.load(open('/tmp/stack.json')).get('Env') or [])
-          json.dump({"stackFileContent": compose, "env": env,
-                     "pullImage": True, "prune": False},
-                    open('/tmp/body.json', 'w'))
-          PY
-
-          curl -fsS -X PUT -H "X-API-Key: $PORTAINER_KEY" -H 'Content-Type: application/json' \
-            --data-binary @/tmp/body.json \
-            "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/result.json
-          echo "deployed stack $ID with $IMAGE"
