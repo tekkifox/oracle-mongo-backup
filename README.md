@@ -43,19 +43,19 @@ restart policy and logs show it.
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `MONGO_URI` | yes | — | ADB Mongo API connection string |
-| `S3_ENDPOINT` | yes | — | e.g. `http://10.104.225.50:9000` |
+| `S3_ENDPOINT` | yes | — | e.g. `https://s3.example.com` |
 | `S3_BUCKET` | yes | — | e.g. `oracle-adb` |
 | `S3_ACCESS_KEY` | yes | — | access key |
 | `S3_SECRET_KEY` | yes | — | secret key |
 | `S3_REGION` | no | `us-east-1` | MinIO ignores it, the SDK does not |
-| `S3_PREFIX` | no | `rossmoney` | filename prefix |
+| `S3_PREFIX` | no | `db` | filename prefix, e.g. the database name |
 | `RETENTION_DAYS` | no | `14` | prune archives older than this |
 
 ## Restore
 
 ```bash
-mc cp local/oracle-adb/adb-rossmoney_20261104_031000.tar.gz .
-tar xzf adb-rossmoney_20261104_031000.tar.gz -C ./dump
+mc cp local/<bucket>/adb-db_20261104_031000.tar.gz .
+tar xzf adb-db_20261104_031000.tar.gz -C ./dump
 # each file is canonical EJSON; mongoimport --jsonArray needs relaxed mode:
 for f in ./dump/*.json; do
   name=$(basename "$f" .json)

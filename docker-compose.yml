@@ -1,10 +1,10 @@
 # Stack for Portainer.
 #
-# Deployed on mgmt-01 (the ADB ACL allows that host) and scheduled internally by
-# supercronic — the container stays up and runs the backup at 03:10 UTC.
+# The container stays up and supercronic runs the backup nightly (see crontab).
+# Deploy it on a host whose address is allowed by the database's network ACL.
 #
 # The image is built on the host that runs it. Once CI publishes to GHCR, change
-# `image:` to ghcr.io/tekkifox/oracle-mongo-backup:latest and drop
+# `image:` to ghcr.io/<owner>/oracle-mongo-backup:latest and drop
 # `pull_policy: never`.
 services:
   oracle-mongo-backup:
@@ -18,7 +18,7 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_PREFIX: ${S3_PREFIX:-rossmoney}
+      S3_PREFIX: ${S3_PREFIX:-db}
       RETENTION_DAYS: ${RETENTION_DAYS:-14}
       TZ: ${TZ:-Europe/London}
       NODE_OPTIONS: --tls-max-v1.2
