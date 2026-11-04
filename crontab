@@ -1,0 +1,4 @@
+# m h dom mon dow command
+# Nightly at 03:10 UTC — after the Portainer backups (02:00-02:30) so they don't
+# compete for the same disk and network.
+10 3 * * * node /app/index.js
