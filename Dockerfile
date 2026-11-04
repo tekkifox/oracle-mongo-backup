@@ -5,14 +5,7 @@
 # connects fine — it is also what the CMS itself uses in production.
 FROM node:22-alpine
 
-ARG SUPERCRONIC_VERSION=v0.2.33
-ARG TARGETARCH=amd64
-
-RUN apk add --no-cache tar curl \
- && curl -fsSL -o /usr/local/bin/supercronic \
-      "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-${TARGETARCH}" \
- && chmod +x /usr/local/bin/supercronic \
- && supercronic -version
+RUN apk add --no-cache tar
 
 # The ADB's Mongo API fails the TLS handshake at 1.3 from some networks
 # ("Client network socket disconnected before secure TLS connection was
@@ -21,13 +14,12 @@ ENV NODE_OPTIONS=--tls-max-v1.2
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json ./
 RUN npm install --silent --omit=dev
 
 COPY index.js ./
-COPY crontab ./crontab
+COPY crontab /etc/crontabs/root
 
-# Fail fast on a bad config rather than silently doing nothing at 03:00.
-RUN node -e "console.log('node ok')"
-
-ENTRYPOINT ["supercronic", "/app/crontab"]
+# busybox crond, already in the base image: -f foreground, -L log to stdout so
+# `docker logs` shows every run.
+CMD ["crond", "-f", "-l", "8", "-L", "/dev/stdout"]
