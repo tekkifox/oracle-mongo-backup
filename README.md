@@ -19,6 +19,11 @@ failed to configure TLS ... connection closed unexpectedly by the other side: EO
 The Node driver connects fine (it is what the CMS uses), so the dump is done
 with `mongodb` + `bson` EJSON, which preserves ObjectId, Date and Binary types.
 
+The image also caps TLS at 1.2 (`NODE_OPTIONS=--tls-max-v1.2`). From some
+networks the handshake at TLS 1.3 is closed by the database before any Mongo
+protocol is exchanged; the same connection succeeds at 1.2 with
+`ECDHE-RSA-AES256-GCM-SHA384`.
+
 The ADB also has a network ACL. Only the addresses in `whitelisted-ips` can
 connect — add the host before deploying.
 

@@ -14,6 +14,11 @@ RUN apk add --no-cache tar curl \
  && chmod +x /usr/local/bin/supercronic \
  && supercronic -version
 
+# The ADB's Mongo API fails the TLS handshake at 1.3 from some networks
+# ("Client network socket disconnected before secure TLS connection was
+# established"); capping at 1.2 makes it negotiate the same suite openssl does.
+ENV NODE_OPTIONS=--tls-max-v1.2
+
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
