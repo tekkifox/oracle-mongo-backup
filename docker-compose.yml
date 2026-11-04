@@ -1,16 +1,15 @@
 # Stack for Portainer.
 #
-# The container stays up and supercronic runs the backup nightly (see crontab).
+# The container stays up and crond runs the backup nightly (see crontab).
 # Deploy it on a host whose address is allowed by the database's network ACL.
 #
-# The image is built on the host that runs it. Once CI publishes to GHCR, change
-# `image:` to ghcr.io/<owner>/oracle-mongo-backup:latest and drop
-# `pull_policy: never`.
+# CI builds the image and redeploys this stack, pinning the image tag to the
+# commit that built it.
 services:
   oracle-mongo-backup:
-    image: oracle-mongo-backup:local
+    image: ghcr.io/tekkifox/oracle-mongo-backup:latest
     container_name: oracle-mongo-backup
-    pull_policy: never
+    pull_policy: always
     restart: unless-stopped
     environment:
       MONGO_URI: ${MONGO_URI}
