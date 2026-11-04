@@ -100,7 +100,7 @@ async function prune({ s3, bucket, key }) {
 }
 
 async function main() {
-  const name = `adb-${env('S3_PREFIX', { required: false, fallback: 'rossmoney' })}_${stamp()}.tar.gz`
+  const name = `adb-${env('S3_PREFIX', { required: false, fallback: 'db' })}_${stamp()}.tar.gz`
   const stats = await dump()
   const { file, size } = archive(name)
   console.log(`archive: ${name} (${size} bytes)`)
