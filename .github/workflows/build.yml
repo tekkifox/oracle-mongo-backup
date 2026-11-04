@@ -56,9 +56,10 @@ jobs:
           IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
         run: |
           set -euo pipefail
+          # -k: Portainer serves a self-signed certificate on the tailnet.
           : "${PORTAINER_URL:?}" "${PORTAINER_KEY:?}" "${PORTAINER_ENDPOINT:?}" "${PORTAINER_STACK:?}"
 
-          curl -fsS -H "X-API-Key: $PORTAINER_KEY" "$PORTAINER_URL/api/stacks" -o /tmp/stacks.json
+          curl -fsSk -H "X-API-Key: $PORTAINER_KEY" "$PORTAINER_URL/api/stacks" -o /tmp/stacks.json
           ID=$(python3 -c "
           import json, os
           name = os.environ['PORTAINER_STACK']
@@ -68,7 +69,7 @@ jobs:
           [ -n "$ID" ] || { echo "stack '$PORTAINER_STACK' not found" >&2; exit 1; }
 
           # The stack's environment holds the secrets; they are not in this repo.
-          curl -fsS -H "X-API-Key: $PORTAINER_KEY" \
+          curl -fsSk -H "X-API-Key: $PORTAINER_KEY" \
             "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/stack.json
 
           python3 - <<'PY'
@@ -82,7 +83,7 @@ jobs:
                     open('/tmp/body.json', 'w'))
           PY
 
-          curl -fsS -X PUT -H "X-API-Key: $PORTAINER_KEY" -H 'Content-Type: application/json' \
+          curl -fsSk -X PUT -H "X-API-Key: $PORTAINER_KEY" -H 'Content-Type: application/json' \
             --data-binary @/tmp/body.json \
             "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/result.json
           echo "deployed stack $ID with $IMAGE"
