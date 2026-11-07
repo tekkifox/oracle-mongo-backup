@@ -48,10 +48,10 @@ jobs:
       # Portainer is only on the tailnet; the hosted runner has to join it
       # before the first API call.
       - name: Join the tailnet
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-          args: --hostname=gh-oracle-mongo-backup-${{ github.run_id }}
+          hostname: gh-oracle-mongo-backup-${{ github.run_id }}
 
       - name: Pin the stack to this commit and redeploy
         env:
