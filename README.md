@@ -77,3 +77,19 @@ Set `TZ` if you want a different local time.
 docker build -t oracle-mongo-backup:local .
 docker run --rm --env-file .env oracle-mongo-backup:local   # one-off
 ```
+
+CI builds `linux/amd64` and `linux/arm64` and pushes to GHCR on every push to
+`main`, tagged `:latest` and with the commit SHA.
+
+## Deploy
+
+The stack is owned by the fleet's Ansible deploy path, on host `photos` as
+stack `photos-oracle-mongo-backup`. It declares
+`ghcr.io/tekkifox/oracle-mongo-backup:latest`; Ansible pulls and recreates it,
+so the compose file does not pin a commit tag.
+
+On a push to `main`, `.github/workflows/build.yml` joins the tailnet and asks
+the fleet deploy seat to deploy that stack. It never writes the compose file.
+
+The SHA tag is still published so a bad release can be rolled back by pinning
+the stack to `ghcr.io/tekkifox/oracle-mongo-backup:<sha>`.
