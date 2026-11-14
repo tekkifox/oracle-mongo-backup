@@ -1,10 +1,11 @@
-# Stack for Portainer.
+# Stack for the fleet's Ansible deploy (host `photos`, stack
+# `photos-oracle-mongo-backup`).
 #
 # The container stays up and crond runs the backup nightly (see crontab).
 # Deploy it on a host whose address is allowed by the database's network ACL.
 #
-# CI builds the image and redeploys this stack, pinning the image tag to the
-# commit that built it.
+# CI publishes this image as `:latest` (and a per-commit SHA tag for rollback).
+# The stack declares `:latest`; CI does not pin the tag it deploys.
 services:
   oracle-mongo-backup:
     image: ghcr.io/tekkifox/oracle-mongo-backup:latest

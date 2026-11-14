@@ -40,56 +40,28 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
+    name: Deploy oracle-mongo-backup
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      # Portainer is only on the tailnet; the hosted runner has to join it
-      # before the first API call.
       - name: Join the tailnet
         uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-          hostname: gh-oracle-mongo-backup-${{ github.run_id }}
-
-      - name: Pin the stack to this commit and redeploy
+          hostname: gh-oracle-backup-${{ github.run_id }}
+      - name: Ask the fleet deploy seat to deploy
         env:
-          PORTAINER_URL: ${{ secrets.PORTAINER_URL }}
-          PORTAINER_KEY: ${{ secrets.PORTAINER_KEY }}
-          PORTAINER_ENDPOINT: ${{ vars.PORTAINER_ENDPOINT }}
-          PORTAINER_STACK: ${{ vars.PORTAINER_STACK }}
-          IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SEAT_HOST: ${{ secrets.DEPLOY_SEAT_HOST }}
+          TARGET_HOST: photos
+          TARGET_STACKS: photos-oracle-mongo-backup
         run: |
           set -euo pipefail
-          # -k: Portainer serves a self-signed certificate on the tailnet.
-          : "${PORTAINER_URL:?}" "${PORTAINER_KEY:?}" "${PORTAINER_ENDPOINT:?}" "${PORTAINER_STACK:?}"
-
-          curl -fsSk -H "X-API-Key: $PORTAINER_KEY" "$PORTAINER_URL/api/stacks" -o /tmp/stacks.json
-          ID=$(python3 -c "
-          import json, os
-          name = os.environ['PORTAINER_STACK']
-          rows = [s for s in json.load(open('/tmp/stacks.json')) if s.get('Name') == name]
-          print(rows[0]['Id'] if rows else '')
-          ")
-          [ -n "$ID" ] || { echo "stack '$PORTAINER_STACK' not found" >&2; exit 1; }
-
-          # The stack's environment holds the secrets; they are not in this repo.
-          curl -fsSk -H "X-API-Key: $PORTAINER_KEY" \
-            "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/stack.json
-
-          python3 - <<'PY'
-          import json, os
-          compose = open('docker-compose.yml').read().replace(
-              'image: ghcr.io/tekkifox/oracle-mongo-backup:latest',
-              f"image: {os.environ['IMAGE']}")
-          env = (json.load(open('/tmp/stack.json')).get('Env') or [])
-          json.dump({"stackFileContent": compose, "env": env,
-                     "pullImage": True, "prune": False},
-                    open('/tmp/body.json', 'w'))
-          PY
-
-          curl -fsSk -X PUT -H "X-API-Key: $PORTAINER_KEY" -H 'Content-Type: application/json' \
-            --data-binary @/tmp/body.json \
-            "$PORTAINER_URL/api/stacks/$ID?endpointId=$PORTAINER_ENDPOINT" -o /tmp/result.json
-          echo "deployed stack $ID with $IMAGE"
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy"
+          chmod 0600 "$HOME/.ssh/deploy"
+          ssh -i "$HOME/.ssh/deploy" -p 32 \
+            -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+            root@"$DEPLOY_SEAT_HOST" \
+            "fleet-deploy $TARGET_HOST $TARGET_STACKS deploy"
