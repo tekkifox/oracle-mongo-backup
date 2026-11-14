@@ -18,8 +18,10 @@ COPY package.json ./
 RUN npm install --silent --omit=dev
 
 COPY index.js ./
+COPY marker.js ./
 COPY crontab /etc/crontabs/root
 
 # busybox crond, already in the base image: -f foreground, -L log to stdout so
-# `docker logs` shows every run.
+# `docker logs` still shows every run. The uptime monitor reads /state/last-success,
+# not the logs (recreating the container discards them).
 CMD ["crond", "-f", "-l", "8", "-L", "/dev/stdout"]
