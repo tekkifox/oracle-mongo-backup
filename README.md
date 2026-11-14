@@ -34,9 +34,33 @@ connect — add the host before deploying.
 3. Tars and gzips the dump.
 4. Uploads it to `s3://$S3_BUCKET/<prefix>_<timestamp>.tar.gz`.
 5. Deletes archives older than `RETENTION_DAYS`.
+6. Writes the completion marker at `/state/last-success` (see below).
 
-Every run is logged to stdout; a failed run exits non-zero so the container
-restart policy and logs show it.
+Every run is logged to stdout; a failed run exits non-zero. The host-side
+uptime check does **not** read `docker logs` — it reads the completion marker
+described below.
+
+## Completion marker
+
+After a successful run the backup writes `/state/last-success`. The state
+directory is bind-mounted from the host (`/home/ross/oracle-backup-state` on
+`photos`); set `STATE_DIR` to use a different mount point inside the
+container.
+
+The marker has two lines:
+
+1. completion time as Unix epoch seconds, nothing else
+2. a short human summary, e.g. `collections=23 documents=37374 bytes=3611403`
+
+It is written atomically — a temp file in the same directory, then `rename` —
+so a reader never sees a half-written file. It is written **only on success**:
+a failed run does not create or touch it. If the state directory is missing or
+not writable the backup still succeeds and logs `state marker skipped (...)`.
+
+The host-side check in `tekkifox/infrastructure-as-code` depends on this
+contract. It deliberately reads the marker instead of `docker logs`, because
+recreating the container wipes its logs and made the log-based check go red
+after every converge.
 
 ## Configuration
 
@@ -50,6 +74,7 @@ restart policy and logs show it.
 | `S3_REGION` | no | `us-east-1` | MinIO ignores it, the SDK does not |
 | `S3_PREFIX` | no | `db` | filename prefix, e.g. the database name |
 | `RETENTION_DAYS` | no | `14` | prune archives older than this |
+| `STATE_DIR` | no | `/state` | where `last-success` is written |
 
 ## Restore
 

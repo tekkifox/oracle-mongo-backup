@@ -4,6 +4,7 @@ const { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectsCommand }
 const { execFileSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { writeSuccessMarker } = require('./marker')
 
 const WORK = '/work'
 const DUMP = path.join(WORK, 'dump')
@@ -99,18 +100,26 @@ async function prune({ s3, bucket, key }) {
   console.log(`retention: removed ${stale.length} archive(s) older than ${days} days`)
 }
 
-async function main() {
+async function main(steps = { dump, archive, upload, prune }) {
   const name = `adb-${env('S3_PREFIX', { required: false, fallback: 'db' })}_${stamp()}.tar.gz`
-  const stats = await dump()
-  const { file, size } = archive(name)
+  const stats = await steps.dump()
+  const { file, size } = steps.archive(name)
   console.log(`archive: ${name} (${size} bytes)`)
-  const uploaded = await upload(file)
-  await prune(uploaded)
+  const uploaded = await steps.upload(file)
+  await steps.prune(uploaded)
   fs.rmSync(WORK, { recursive: true, force: true })
-  console.log(`done: collections=${stats.collections} documents=${stats.documents} bytes=${size}`)
+  const summary = `collections=${stats.collections} documents=${stats.documents} bytes=${size}`
+  console.log(`done: ${summary}`)
+  // Completion marker for the host-side uptime check (see README). Only
+  // reached on success; writeSuccessMarker never throws.
+  writeSuccessMarker(summary)
 }
 
-main().catch((err) => {
-  console.error('BACKUP FAILED:', err.message)
-  process.exit(1)
-})
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('BACKUP FAILED:', err.message)
+    process.exit(1)
+  })
+}
+
+module.exports = { main }
