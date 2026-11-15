@@ -103,7 +103,8 @@ docker build -t oracle-mongo-backup:local .
 docker run --rm --env-file .env oracle-mongo-backup:local   # one-off
 ```
 
-CI builds `linux/amd64` and `linux/arm64` and pushes to GHCR on every push to
+CI builds `linux/arm64` natively on a GitHub-hosted ARM runner (its only
+consumer, the `photos` host, is ARM) and pushes to GHCR on every push to
 `main`, tagged `:latest` and with the commit SHA.
 
 ## Deploy
