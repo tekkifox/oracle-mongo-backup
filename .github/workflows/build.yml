@@ -10,15 +10,14 @@ env:
 
 jobs:
   build:
-    # QEMU gives both architectures from the one amd64 hosted runner.
-    runs-on: ubuntu-latest
+    # The image only runs on photos, which is ARM, so build natively on the
+    # GitHub-hosted arm64 runner.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -31,7 +30,6 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.IMAGE }}:latest
