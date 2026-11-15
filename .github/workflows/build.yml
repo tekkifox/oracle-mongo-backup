@@ -3,6 +3,9 @@ name: Build and deploy
 on:
   push:
     branches: [main]
+  # Pull requests get the build as a check, with every publishing step gated
+  # off below: no registry login, no push, and the deploy job is skipped.
+  pull_request:
   workflow_dispatch:
 
 env:
@@ -21,16 +24,19 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      # No registry credentials on a pull request: nothing may publish there.
       - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The same image build runs on every event; only a non-PR run pushes it.
       - uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
@@ -40,7 +46,8 @@ jobs:
   deploy:
     name: Deploy oracle-mongo-backup
     needs: build
-    if: github.ref == 'refs/heads/main'
+    # Never on a pull request; otherwise only from main.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Join the tailnet
