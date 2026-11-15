@@ -9,7 +9,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.850.0",
+    "@aws-sdk/client-s3": "3.1169.0",
     "bson": "6.10.4",
     "mongodb": "6.22.0"
   }
