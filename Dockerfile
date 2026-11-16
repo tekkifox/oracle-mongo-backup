@@ -3,7 +3,7 @@
 # The Node driver is used rather than mongodump/mongosh: the ADB's TLS profile
 # rejects both of those ("connection closed unexpectedly") while the Node driver
 # connects fine — it is also what the CMS itself uses in production.
-FROM node:22-alpine
+FROM node:26-alpine
 
 RUN apk add --no-cache tar
 
