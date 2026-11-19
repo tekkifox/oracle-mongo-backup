@@ -11,6 +11,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1172.0",
     "bson": "7.3.4",
-    "mongodb": "7.9.0"
+    "mongodb": "7.9.1"
   }
 }
