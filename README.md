@@ -114,8 +114,11 @@ stack `photos-oracle-mongo-backup`. It declares
 `ghcr.io/tekkifox/oracle-mongo-backup:latest`; Ansible pulls and recreates it,
 so the compose file does not pin a commit tag.
 
-On a push to `main`, `.github/workflows/build.yml` joins the tailnet and asks
-the fleet deploy seat to deploy that stack. It never writes the compose file.
+On a push to `main`, `.github/workflows/build.yml` builds and pushes the
+image, then a self-hosted runner uses the preinstalled deploy key at
+`$HOME/.ssh/deploy` to ask the fleet deploy seat (configured by the
+`DEPLOY_SEAT_HOST` repository secret) to deploy that stack. It never writes the
+compose file.
 
 The SHA tag is still published so a bad release can be rolled back by pinning
 the stack to `ghcr.io/tekkifox/oracle-mongo-backup:<sha>`.
