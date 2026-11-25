@@ -56,6 +56,7 @@ jobs:
     # Never on a pull request; otherwise only from main.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Join the tailnet
         uses: tailscale/github-action@v4
